@@ -1,0 +1,13 @@
+# Ambientes e Segredos
+.env
+*.log
+
+# Dados do Docker (Volumes)
+# Substitua pelo nome das pastas que você definiu no docker-compose
+postgres_data/
+evolution_data/
+n8n_data/
+
+# Sistema
+.DS_Store
+Thumbs.db
