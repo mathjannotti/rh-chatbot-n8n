@@ -1,67 +1,50 @@
 version: '3.8'
 
-services:
-  db:
-    image: postgres:15
-    container_name: postgres-rh
-    restart: always
-    environment:
-      - POSTGRES_USER=postgres
-      - POSTGRES_PASSWORD=banco123
-      - POSTGRES_DB=evolution_db
-    ports:
-      - "5433:5432" # Porta 5433 para acesso externo (DBeaver)
-    volumes:
-      - postgres_data_novo:/var/lib/postgresql/data
-      - ./init-db:/docker-entrypoint-initdb.d
-    networks:
-      - rh-network
-
-  n8n:
-    image: n8nio/n8n:latest
-    container_name: n8n-rh
-    restart: always
-    ports:
-      - "5678:5678"
-    environment:
-      - DB_TYPE=postgresdb
-      - DB_POSTGRESDB_HOST=db
-      - DB_POSTGRESDB_PORT=5432
-      - DB_POSTGRESDB_DATABASE=evolution_db
-      - DB_POSTGRESDB_USER=postgres
-      - DB_POSTGRESDB_PASSWORD=banco123
-      - N8N_DIAGNOSTICS_ENABLED=false
-      - N8N_PERSONALIZATION_ENABLED=false
-      - N8N_TELEMETRY_ENABLED=false
-      
-    volumes:
-      - ./n8n_data:/home/node/.n8n
-    networks:
-      - rh-network
-    depends_on:
-      - db
-
-  evolution:
-    image: atendai/evolution-api:latest
-    container_name: evolution-api
-    restart: always
-    ports:
-      - "8080:8080"
-    environment:
-      - SERVER_URL=http://localhost:8080
-      - AUTHENTICATION_TYPE=apikey
-      - AUTHENTICATION_API_KEY=apikeyjannotti
-      - DATABASE_ENABLED=true
-      - DATABASE_PROVIDER=postgresql
-      - DATABASE_CONNECTION_URI=postgresql://postgres:banco123@db:5432/evolution_db?sslmode=disable
-    networks:
-      - rh-network
-    depends_on:
-      - db
-
 networks:
-  rh-network:
+  rh_network:
     driver: bridge
 
-volumes:
-  postgres_data_novo:
+services:
+  # Seu banco de dados atual
+  postgres:
+    image: postgres:15
+    container_name: postgres_db
+    networks:
+      - rh_network
+    environment:
+      POSTGRES_DB: rh_database
+      POSTGRES_USER: user_admin
+      POSTGRES_PASSWORD: sua_senha_forte
+    ports:
+      - "5432:5432"
+
+  # Seu n8n atual
+  n8n:
+    image: n8nio/n8n:latest
+    container_name: n8n_app
+    networks:
+      - rh_network
+    environment:
+      - N8N_HOST=localhost
+      - DB_TYPE=postgresdb
+      - DB_POSTGRESDB_HOST=postgres
+      - DB_POSTGRESDB_PORT=5432
+      - DB_POSTGRESDB_DATABASE=rh_database
+      - DB_POSTGRESDB_USER=user_admin
+      - DB_POSTGRESDB_PASSWORD=sua_senha_forte
+    ports:
+      - "5678:5678"
+      
+      
+  # A nova interface do RH
+  appsmith:
+    image: appsmith/appsmith-ce
+    container_name: appsmith_ui
+    networks:
+      - rh_network
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./appsmith_data:/appsmith-stacks
+    restart: always
