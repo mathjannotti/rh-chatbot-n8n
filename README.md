@@ -1,72 +1,87 @@
-# RH Chatbot - Automação n8n & Evolution API
+# RH Chatbot - Automação n8n, Evolution API & Gestão de Chamados
 
-Este projeto consiste em um backend automatizado para RH que permite a colaboradores consultarem saldo de férias e links de contracheque via WhatsApp.
+Este projeto é uma solução completa de backend para RH, permitindo que colaboradores consultem informações (Férias, Holerite) e abram chamados (Benefícios, Onboarding) via WhatsApp. O sistema utiliza uma estrutura hierárquica de menus e armazena interações em um banco relacional para análise de dados (BI).
 
 ## 🚀 Tecnologias
 
-* n8n: Orquestrador de workflows e lógica de backend.
-* PostgreSQL: Banco de dados para informações de funcionários.
-* Evolution API: Gateway v2 para integração com WhatsApp.
-* Docker & Docker Compose: Gerenciamento de infraestrutura.
+* **n8n**: Orquestrador de workflows e lógica de estados.
+* **PostgreSQL**: Banco de dados para dados de funcionários e gestão de tickets.
+* **Evolution API (v2)**: Gateway para integração profissional com WhatsApp.
+* **Docker & Docker Compose**: Gerenciamento de infraestrutura em containers.
 
 ---
 
 ## 📂 Estrutura do Projeto
 
+├── init-db/
+│   └── init.sql              # Script de criação automática das tabelas e bancos
 ├── workflows/
-│   └── workflow_rh.json      # Fluxo lógico exportado do n8n
-├── docker-compose.yml        # Configuração dos serviços
+│   └── workflow_rh.json      # Fluxo lógico hierárquico exportado do n8n
+├── docker-compose.yml        # Orquestrador de serviços
 ├── .env.example              # Modelo de variáveis de ambiente
-├── .gitignore                # Filtro para ignorar .env e volumes
 └── README.md                 # Documentação técnica
 
 ---
 
 ## 🛠️ Como Instalar e Rodar
 
-### 1. Preparação do Ambiente
-Clone o repositório e crie o arquivo de variáveis de ambiente:
+### 1. Preparação
+Clone o repositório e configure as variáveis:
 
 git clone https://github.com/seu-usuario/rh-chatbot.git
 cd rh-chatbot
 cp .env.example .env
 
 ### 2. Subir Infraestrutura
-Certifique-se de que o Docker está em execução e suba os containers:
+Execute o comando para iniciar o banco de dados, o n8n e a API:
 
 docker-compose up -d
 
-### 3. Configuração do n8n
-1. Acesse o painel em http://localhost:5678.
-2. No menu lateral, vá em Workflows > Import from File.
-3. Selecione o arquivo workflows/workflow_rh.json.
-4. Atualize as credenciais no nó PostgreSQL para conectar ao banco evolution_db.
+*O script em `./init-db/init.sql` criará automaticamente o banco `rh_database` e a tabela de `chamados`.*
 
-### 4. Pareamento com WhatsApp
-Acompanhe os logs do container para escanear o QR Code:
+### 3. Pareamento
+Acompanhe os logs para escanear o QR Code do WhatsApp:
 
 docker logs -f evolution-api
 
 ---
 
-## 🛡️ Resiliência e Tratamento de Dados
+## 🛡️ Arquitetura e Funcionalidades
 
-O workflow foi otimizado para evitar falhas comuns:
+### 1. Fluxo Hierárquico
+O bot utiliza List Messages e Button IDs para guiar o usuário:
+* Nível 1: Menu Principal (Férias, Holerite, Benefícios, Suporte).
+* Nível 2: Submenus específicos (ex: Benefícios -> VR, VT ou Plano de Saúde).
+* Nível 3: Ações (Consulta de saldo ou Abertura de chamado).
 
-* Normalização de Strings: JavaScript para remover acentos e converter para minúsculas.
-* Regex Match: Aceita variações como férias, ferias, contracheque, holerite ou pagamento.
-* Referência de Nós: Uso de $node["Webhook"] para manter o acesso à mensagem original em todo o fluxo.
+### 2. Sistema de Chamados (Ticketing)
+Para questões complexas (ex: valor errado de benefício), o bot coleta o relato do usuário e registra na tabela chamados:
+* Categorização Automática: O sistema identifica a origem do problema pelo menu navegado.
+* Status em Tempo Real: Os chamados nascem com status Aberto e podem ser geridos via SQL.
+
+### 3. Inteligência de Dados (BI)
+A estrutura do banco de dados foi desenhada para integração direta com Power BI ou Metabase, permitindo analisar:
+* Volume de chamados por categoria.
+* Tempo médio de resolução do RH.
+* Identificação de problemas sistêmicos.
 
 ---
 
-## 📊 Estrutura da Tabela SQL
-
-O banco de dados PostgreSQL deve conter a tabela funcionarios:
+## 📊 Estrutura do Banco de Dados
 
 CREATE TABLE funcionarios (
-    id SERIAL PRIMARY KEY,
+    cpf VARCHAR(11) PRIMARY KEY,
     nome TEXT,
-    cpf VARCHAR(11) UNIQUE,
     saldo_ferias INT,
     link_holerite TEXT
+);
+
+CREATE TABLE chamados (
+    id SERIAL PRIMARY KEY,
+    funcionario_cpf VARCHAR(11) REFERENCES funcionarios(cpf),
+    categoria VARCHAR(50),
+    subcategoria VARCHAR(50),
+    descricao TEXT,
+    status VARCHAR(20) DEFAULT 'Aberto',
+    data_criacao TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );

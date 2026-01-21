@@ -1,0 +1,443 @@
+{
+  "name": "RH Chatbot - V2 Corrigido",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "f1948106-d24a-4b24-8202-e420c0949e19",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "5a1dc130-1ebb-4bee-869f-15cb40fc98a2",
+      "name": "Webhook",
+      "webhookId": "18e79587-cf47-438f-a7b6-8759e3d07247"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT * FROM funcionarios WHERE cpf = '{{ $json.body.body.data.message.conversation }}'",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        224,
+        0
+      ],
+      "id": "caa0969b-1567-49d2-a99d-9ee18805840d",
+      "name": "Consulta Funcionário",
+      "alwaysOutputData": true,
+      "credentials": {
+        "postgres": {
+          "id": "Ilg1dQ6HD9N21qyY",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": false,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $('Webhook').item.json.body.body.mensagem }}",
+                    "rightValue": ".*f.rias.*",
+                    "operator": {
+                      "type": "string",
+                      "operation": "regex"
+                    },
+                    "id": "e9201964-50ce-4755-91cb-f62fdf5976c5"
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": false,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $('Webhook').item.json.body.body.mensagem }}",
+                    "rightValue": ".*(holerite|pagamento).*",
+                    "operator": {
+                      "type": "string",
+                      "operation": "regex"
+                    },
+                    "id": "9d149bad-e1a9-4b22-a3ba-cf69b07353d4"
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": false,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $('Webhook').item.json.body.body.mensagem }}",
+                    "rightValue": ".*(benef.cio|vr|va).*",
+                    "operator": {
+                      "type": "string",
+                      "operation": "regex"
+                    },
+                    "id": "5cdf71e3-6352-47c7-aeba-682c8a2d0883"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Menu Beneficios"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": false,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $('Webhook').item.json.body.body.mensagem }}",
+                    "rightValue": "Vale Refeição",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "4fce9d16-6f7d-41b1-986d-1713ce4bb331"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Abrir Chamado VR"
+            }
+          ]
+        },
+        "options": {
+          "ignoreCase": true
+        }
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        720,
+        0
+      ],
+      "id": "9b089694-07ad-4784-84ec-4b191b8397e3",
+      "name": "Switch Lógica"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=http://evolution:8080/message/sendList/{{ $node[\"Webhook\"].json.body.instance }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "apikeyjannotti"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"number\": \"{{ $node[\"Webhook\"].json.body.key.remoteJid }}\",\n  \"title\": \"🏥 Benefícios\",\n  \"description\": \"Selecione para abrir um chamado:\",\n  \"buttonText\": \"Ver opções\",\n  \"sections\": [\n    {\n      \"title\": \"Selecione\",\n      \"rows\": [\n        { \"title\": \"Vale Refeição\", \"rowId\": \"vr_erro\", \"description\": \"Relatar erro no valor\" },\n        { \"title\": \"Vale Transporte\", \"rowId\": \"vt_erro\" }\n      ]\n    }\n  ]\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        1072,
+        48
+      ],
+      "name": "Enviar Lista Benefícios",
+      "id": "e42dcafc-d6ec-4766-8783-0473707518ba"
+    },
+    {
+      "parameters": {
+        "schema": {
+          "__rl": true,
+          "value": "public",
+          "mode": "list"
+        },
+        "table": {
+          "__rl": true,
+          "value": "chamados",
+          "mode": "list"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "funcionario_cpf": "={{ $node[\"Consulta Funcionário\"].json.cpf }}",
+            "categoria": "Benefícios",
+            "descricao": "={{ $node[\"Webhook\"].json.body.mensagem }}",
+            "status": "Aberto",
+            "id": 0
+          },
+          "matchingColumns": [
+            "id"
+          ],
+          "schema": [
+            {
+              "id": "id",
+              "displayName": "id",
+              "required": false,
+              "defaultMatch": true,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "funcionario_cpf",
+              "displayName": "funcionario_cpf",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "categoria",
+              "displayName": "categoria",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "descricao",
+              "displayName": "descricao",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "status",
+              "displayName": "status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "data_criacao",
+              "displayName": "data_criacao",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "dateTime",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        1072,
+        192
+      ],
+      "name": "Gravar Chamado VR",
+      "id": "839bbb8e-351f-4215-8aa1-16c031faf803",
+      "credentials": {
+        "postgres": {
+          "id": "Ilg1dQ6HD9N21qyY",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "18050693-00ff-4762-92f8-8fae67c7afee",
+              "leftValue": "={{ $node[\"Consulta Funcionário\"].json.cpf }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        432,
+        0
+      ],
+      "id": "3e4a69e8-303d-40c0-97d7-497ed231f8cb",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=http://evolution:8080/message/sendText/{{ $node[\"Webhook\"].json.body.instance }}",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"number\": \"{{ $node[\"Webhook\"].json.body.key.remoteJid }}\",\n  \"text\": \"Desculpe, não encontrei seu CPF em nossa base de dados. Por favor, entre em contato com o RH.\"\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        432,
+        208
+      ],
+      "id": "d54535b0-f716-4c6e-937b-f43a1dc33e99",
+      "name": "HTTP Request"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=http://evolution:8080/message/sendText/{{ $('Webhook').item.json.body.body.instance }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "apikeyjannotti"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"number\": \"{{ $('Webhook').item.json.body.body.key.remoteJid }}\",\n  \"text\": \"Olá {{ $('Consulta Funcionário').item.json.nome }}, identifiquei seu pedido. Seu saldo de férias é de {{ $('Consulta Funcionário').item.json.saldo_ferias }} dias.\"\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        928,
+        -107.23123929308423
+      ],
+      "id": "2abbacea-0a54-4b67-bd2a-dae4520c84c3",
+      "name": "HTTP Request1"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Consulta Funcionário",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Consulta Funcionário": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch Lógica": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [],
+        [
+          {
+            "node": "Enviar Lista Benefícios",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Gravar Chamado VR",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Switch Lógica",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "availableInMCP": false
+  },
+  "versionId": "2210fcd6-3b44-4a8a-a41c-2911c6ff8ef5",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "d0001e8793ef2f52d9de0283c3beab7e6cb123d880ae61cf69461ac09e22f848"
+  },
+  "id": "GgP_ehl1blQkWjwMDJbuM",
+  "tags": []
+}
